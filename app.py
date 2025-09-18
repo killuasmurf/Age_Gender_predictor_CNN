@@ -1,41 +1,41 @@
+# app.py
 import streamlit as st
+from PIL import Image
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
-import cv2
 
-# Load trained model
-@st.cache_resource
-def load_age_gender_model():
-    return load_model("age_gender_model.h5")  # replace with your saved model path
+# Load your saved model
+@st.cache_resource  # ensures the model loads only once
+def load_model():
+    return keras.models.load_model("models/age_gender_model_2.keras")
 
-model = load_age_gender_model()
+model = load_model()
 
 # Streamlit UI
-st.title("👤 Age & Gender Prediction App")
-st.write("Upload a face image (.jpg) to get age and gender predictions.")
+st.title("🧑‍🦱 Age & Gender Prediction App")
 
-uploaded_file = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("Upload a face image", type=["jpg", "png", "jpeg"])
 
 if uploaded_file is not None:
-    # Show uploaded image
-    st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
+    # Display uploaded image
+    image = Image.open(uploaded_file).convert("RGB")
+    st.image(image, caption="Uploaded Image", use_column_width=True)
 
     # Preprocess image
-    img = image.load_img(uploaded_file, target_size=(200, 200))  # match training size
-    img_array = image.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0) / 255.0
+    img_resized = image.resize((200, 200))  # same size as training
+    img_array = np.array(img_resized) / 255.0  # normalize
+    img_array = np.expand_dims(img_array, axis=0)  # add batch dimension
 
     # Predict
-    pred = model.predict(img_array)
+    age_pred, gender_pred = model.predict(img_array)
+    import numpy as np
 
-    # Assuming model outputs [age, gender_probs]
-    age_pred = pred[0][0]            # regression output
-    gender_prob = pred[1][0]         # probability for female (for example)
-    gender_label = "Female" if gender_prob > 0.5 else "Male"
+    # Process results
+    predicted_age = age_pred[0][0]
+    predicted_gender = "Male" if gender_pred[0][0] > gender_pred[0][1] else "Female"
+    predicted_gender_prob = np.max(gender_pred, axis=1)
 
     # Show results
-    st.subheader("Results")
-    st.write(f"**Predicted Age:** {age_pred:.1f} years")
-    st.write(f"**Predicted Gender:** {gender_label} (confidence: {gender_prob:.2f})")
+    st.subheader("🔎 Prediction Results")
+    st.write(f"**Predicted Age:** {predicted_age:.1f} years")
+    st.write(f"**Predicted Gender:** {predicted_gender}")
+    st.balloons()
